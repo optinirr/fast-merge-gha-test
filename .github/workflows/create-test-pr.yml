@@ -1,0 +1,43 @@
+name: Create Test PR
+
+# Opens a PR authored by github-actions[bot] so the repo owner can approve it.
+# Use this to set up fast-merge test scenarios.
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_title:
+        description: "PR title"
+        required: false
+        default: "Test PR: dummy fix (CI will fail)"
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create branch and dummy commit
+        run: |
+          BRANCH="test/auto-$(date +%s)"
+          echo "branch=$BRANCH" >> $GITHUB_ENV
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git checkout -b $BRANCH
+          echo "test run $(date)" >> test-changes.txt
+          git add test-changes.txt
+          git commit -m "Dummy change for fast-merge test"
+          git push origin $BRANCH
+
+      - name: Open PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --base main \
+            --head $branch \
+            --title "${{ github.event.inputs.pr_title }}" \
+            --body "Auto-generated test PR. CI will fail. Approve this PR as yourself, then add the \`fast-merge\` label to test the bypass."

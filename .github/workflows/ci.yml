@@ -1,0 +1,11 @@
+name: CI
+
+on:
+  pull_request:
+
+jobs:
+  always-fails:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Simulate failing required check
+        run: exit 1
