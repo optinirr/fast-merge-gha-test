@@ -5,7 +5,7 @@ on:
     types: [labeled]
 
 env:
-  FAST_MERGE_APPROVERS: "optinirr orengriffin elad661"
+  FAST_MERGE_APPROVERS: "optinirr"
 
 jobs:
   fast-merge:

@@ -1,2 +1,2 @@
-# armada-fast-merge-test
-Test repo for fast-merge GHA workflow
+# fast-merge-gha-test
+Test repo for a label-triggered GitHub Actions fast-merge workflow.
