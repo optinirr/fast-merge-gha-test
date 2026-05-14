@@ -3,13 +3,18 @@ name: Fast Merge
 on:
   pull_request:
     types: [labeled]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to fast-merge"
+        required: true
 
 env:
   FAST_MERGE_APPROVERS: "optinirr"
 
 jobs:
   fast-merge:
-    if: github.event.label.name == 'fast-merge'
+    if: github.event.label.name == 'fast-merge' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -21,10 +26,19 @@ jobs:
         with:
           gh-cli-version: 2.65.0
 
+      - name: Resolve PR number
+        id: resolve
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "pr_number=${{ github.event.inputs.pr_number }}" >> $GITHUB_OUTPUT
+          else
+            echo "pr_number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Check for power-user approval
         id: check-approval
         run: |
-          # TESTING STUB: hardcoded approved to isolate bypass behaviour
+          # TESTING STUB
           echo "approved=true" >> $GITHUB_OUTPUT
           echo "approved_by=test-stub" >> $GITHUB_OUTPUT
 
@@ -35,13 +49,12 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Rebase PR branch onto target
-        id: rebase
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          HEAD_REF: ${{ github.event.pull_request.head.ref }}
-          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_NUMBER: ${{ steps.resolve.outputs.pr_number }}
         run: |
+          HEAD_REF=$(gh pr view ${PR_NUMBER} --repo ${{ github.repository }} --json headRefName -q .headRefName)
+          BASE_REF=$(gh pr view ${PR_NUMBER} --repo ${{ github.repository }} --json baseRefName -q .baseRefName)
           git config user.email "optinirr@users.noreply.github.com"
           git config user.name "optinirr"
           git checkout -b ${HEAD_REF} origin/${HEAD_REF}
@@ -51,8 +64,7 @@ jobs:
       - name: Merge
         env:
           GH_TOKEN: ${{ secrets.FAST_MERGE_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_NUMBER: ${{ steps.resolve.outputs.pr_number }}
         run: |
           gh pr comment ${PR_NUMBER} --repo ${{ github.repository }} \
             --body "**Fast merge** (test-stub approval). Merging now — bypassing required status checks."
